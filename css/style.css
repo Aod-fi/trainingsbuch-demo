@@ -1,0 +1,274 @@
+/* Aussehen des Trainingsbuchs.
+   Farben stehen oben als Variablen (hell und dunkel), angelehnt an die Wanderplanung und Thailändisch. */
+:root {
+  --grund: #f4f1ea;
+  --karte: #fffdf8;
+  --text: #1f2a26;
+  --leise: #5f6b66;
+  --linie: #e4ddcf;
+  --akzent: #2f5d50;
+  --auf-akzent: #ffffff;
+  --akzent-hell: #e4eee9;
+  --chip: #ebe6da;
+  --warn: #b23b3b;
+  --hinweis-grund: #fff3d6;
+  --hinweis-text: #6b4e00;
+  --geprueft: #2e7d4f;  --geprueft-grund: #e1f1e7;
+  --ausbildung: #9a5f00; --ausbildung-grund: #fbeed6;
+  --helfer: #4d5f86;    --helfer-grund: #e6eaf4;
+  --probe: #73559e;     --probe-grund: #efe8f8;
+  --schatten: 0 1px 2px rgba(0, 0, 0, .05), 0 6px 18px rgba(0, 0, 0, .05);
+  --rund: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--grund);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --grund: #141a18; --karte: #1d2522; --text: #e8ece9; --leise: #9aa7a1; --linie: #2e3935;
+    --akzent: #7fb8a4; --auf-akzent: #0f1513; --akzent-hell: #233630; --chip: #26302c;
+    --warn: #ef7d7d; --hinweis-grund: #3a3220; --hinweis-text: #f0d79a;
+    --geprueft: #6fcf97; --geprueft-grund: #1f3a2b;
+    --ausbildung: #e8b45a; --ausbildung-grund: #3a2f1c;
+    --helfer: #a9b8da; --helfer-grund: #262d3d;
+    --probe: #c6aaf0; --probe-grund: #30283f;
+    --schatten: none;
+  }
+}
+:root[data-theme="dark"] {
+  --grund: #141a18; --karte: #1d2522; --text: #e8ece9; --leise: #9aa7a1; --linie: #2e3935;
+  --akzent: #7fb8a4; --auf-akzent: #0f1513; --akzent-hell: #233630; --chip: #26302c;
+  --warn: #ef7d7d; --hinweis-grund: #3a3220; --hinweis-text: #f0d79a;
+  --geprueft: #6fcf97; --geprueft-grund: #1f3a2b; --ausbildung: #e8b45a; --ausbildung-grund: #3a2f1c;
+  --helfer: #a9b8da; --helfer-grund: #262d3d; --probe: #c6aaf0; --probe-grund: #30283f; --schatten: none;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--grund); }
+[hidden] { display: none !important; }
+main { max-width: 640px; margin: 0 auto; padding: 4px 16px calc(96px + env(safe-area-inset-bottom)); }
+
+/* ---------- Kopf: große Überschrift statt farbiger Leiste ---------- */
+.kopf {
+  position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px;
+  max-width: 640px; margin: 0 auto; padding: calc(14px + env(safe-area-inset-top)) 16px 10px;
+  background: color-mix(in srgb, var(--grund) 88%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(12px); backdrop-filter: saturate(1.4) blur(12px);
+}
+.kopf h1 { flex: 1; min-width: 0; margin: 0; font-size: 1.6rem; line-height: 1.15; letter-spacing: -.02em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kopf .zurueck, .kopf .logo, .avatar-knopf {
+  flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+  text-decoration: none; font-size: 1.1rem;
+}
+.kopf .zurueck { background: var(--karte); color: var(--text); box-shadow: var(--schatten); border: 1px solid var(--linie); font-size: 1.5rem; line-height: 1; padding-bottom: 3px; }
+.kopf .logo { background: var(--akzent-hell); }
+.avatar-knopf { background: var(--akzent); color: var(--auf-akzent); font-weight: 700; font-size: .95rem; }
+.testbanner { max-width: 640px; margin: 0 auto 4px; padding: 0 16px; }
+.testbanner span { display: inline-block; font-size: .75rem; font-weight: 600; padding: 3px 10px; border-radius: 99px;
+  background: var(--hinweis-grund); color: var(--hinweis-text); }
+
+/* ---------- Untere Navigation ---------- */
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; justify-content: center;
+  background: color-mix(in srgb, var(--karte) 92%, transparent); border-top: 1px solid var(--linie);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.tabs a { flex: 1; max-width: 160px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 9px 4px 8px; color: var(--leise); text-decoration: none; font-size: .72rem; font-weight: 500; }
+.tabs a .ico { display: grid; place-items: center; height: 26px; }
+.tabs a .ico .ikon { width: 23px; height: 23px; }
+.tabs a.aktiv { color: var(--akzent); font-weight: 700; }
+.tabs a.plus .ico { width: 40px; border-radius: 99px; background: var(--akzent); color: var(--auf-akzent); }
+.tabs a.plus .ico .ikon { width: 20px; height: 20px; stroke-width: 2.6; }
+
+/* ---------- Schrift ---------- */
+h2 { font-size: 1.1rem; margin: 0 0 10px; letter-spacing: -.01em; }
+h3 { font-size: 1rem; margin: 16px 0 6px; }
+.abschnitt { margin: 26px 4px 6px; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--leise); }
+.klein { font-size: .85rem; color: var(--leise); }
+.warn { color: var(--warn); font-weight: 600; }
+.leer { color: var(--leise); }
+.hinweis { margin-top: 16px; }
+.trenner { margin: 16px 0 4px; }
+a { color: var(--akzent); }
+
+/* ---------- Karten ---------- */
+.karte { background: var(--karte); border: 1px solid var(--linie); border-radius: var(--rund); padding: 16px;
+  margin: 12px 0; box-shadow: var(--schatten); }
+.zeile { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+
+/* Kennzahlen auf der Übersicht */
+.kacheln { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 6px 0 14px; }
+.kachel { background: var(--karte); border: 1px solid var(--linie); border-radius: 14px; padding: 10px 12px; box-shadow: var(--schatten); }
+.kachel b { display: block; font-size: 1.45rem; line-height: 1.1; color: var(--akzent); }
+.kachel span { font-size: .75rem; color: var(--leise); }
+
+/* Status-Etiketten */
+.tag { flex: none; font-size: .72rem; font-weight: 700; padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+.tag.geprueft { color: var(--geprueft); background: var(--geprueft-grund); }
+.tag.ausbildung { color: var(--ausbildung); background: var(--ausbildung-grund); }
+.tag.helfer { color: var(--helfer); background: var(--helfer-grund); }
+.tag.probe { color: var(--probe); background: var(--probe-grund); }
+
+/* ---------- Knöpfe ---------- */
+button, .haupt { font: inherit; }
+.haupt {
+  display: block; width: 100%; min-height: 50px; margin-top: 16px; padding: 13px; border: 0; border-radius: 14px;
+  background: var(--akzent); color: var(--auf-akzent); font-weight: 650; text-align: center; text-decoration: none; cursor: pointer;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--akzent) 30%, transparent);
+}
+.haupt:active, .zweit:active, .liste a:active, .wahl:active { transform: scale(.985); }
+.haupt.gross { font-size: 1.1rem; min-height: 58px; margin: 6px 0 12px; display: flex; align-items: center; justify-content: center; }
+.zweit { display: block; text-align: center; padding: 12px; margin: 0 0 12px; border: 1.5px solid var(--akzent);
+  border-radius: 14px; color: var(--akzent); background: transparent; text-decoration: none; font-weight: 650; }
+.link { background: none; border: 0; color: var(--akzent); padding: 10px 0; min-height: 44px; cursor: pointer; font-weight: 500; }
+.link.gefahr { color: var(--warn); font-size: .88rem; }
+button:disabled { opacity: .6; cursor: progress; }
+
+/* ---------- Formulare ---------- */
+label { display: block; margin: 12px 0; font-size: .88rem; font-weight: 600; color: var(--leise); }
+input, select, textarea {
+  display: block; width: 100%; margin-top: 6px; padding: 12px 14px; font: inherit; font-size: 16px; /* 16px verhindert iOS-Zoom */
+  font-weight: 400; color: var(--text); background: var(--grund); border: 1.5px solid transparent; border-radius: 12px;
+  transition: border-color .15s, background .15s;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--akzent); background: var(--karte); }
+textarea { resize: vertical; }
+fieldset { border: 0; padding: 0; margin: 14px 0; }
+legend { font-size: .88rem; font-weight: 600; color: var(--leise); margin-bottom: 8px; padding: 0; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { margin: 0; font-weight: 400; }
+.chip, .skala label { position: relative; }
+.chip input, .skala input { position: absolute; inset: 0; width: 1px; height: 1px; margin: 0; padding: 0; opacity: 0; pointer-events: none; }
+.chip span { display: inline-block; padding: 8px 14px; border-radius: 99px; background: var(--chip); color: var(--text); font-size: .9rem; }
+.chip input:checked + span, .skala input:checked + span { background: var(--akzent); color: var(--auf-akzent); }
+.chip input:focus-visible + span, .skala input:focus-visible + span { outline: 2px solid var(--akzent); outline-offset: 2px; }
+
+.skala { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.skala.drei { grid-template-columns: repeat(3, 1fr); }
+.skala label { margin: 0; color: var(--text); }
+.skala span { display: flex; align-items: center; justify-content: center; min-height: 48px; border-radius: 12px;
+  background: var(--chip); font-weight: 700; transition: background .15s; }
+
+/* Filter als Pillen, bleiben beim Scrollen oben */
+.filter { position: sticky; top: calc(64px + env(safe-area-inset-top)); z-index: 4; display: flex; gap: 8px;
+  overflow-x: auto; padding: 6px 0 8px; margin: 0 -16px; padding-left: 16px; padding-right: 16px;
+  background: color-mix(in srgb, var(--grund) 88%, transparent); scrollbar-width: none; }
+.filter::-webkit-scrollbar { display: none; }
+.filter button { flex: none; border: 1px solid var(--linie); background: var(--karte); color: var(--text);
+  border-radius: 99px; padding: 7px 14px; font-size: .88rem; cursor: pointer; }
+.filter button.aktiv { background: var(--akzent); color: var(--auf-akzent); border-color: var(--akzent); }
+
+/* ---------- Listen ---------- */
+.liste { list-style: none; padding: 0; margin: 6px 0; }
+.liste a { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin: 8px 0; background: var(--karte);
+  border: 1px solid var(--linie); border-radius: var(--rund); color: inherit; text-decoration: none; box-shadow: var(--schatten);
+  transition: transform .1s; }
+.liste a > div:not(.avatar) { flex: 1; min-width: 0; }
+.liste a .zeile + .klein, .liste a .klein { margin-top: 1px; }
+.liste a.ich { border-color: var(--akzent); }
+.liste.kompakt a { display: block; margin: 8px 0; padding: 12px 14px; }
+.liste .leer { padding: 12px 4px; }
+
+.avatar { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
+  font-weight: 700; font-size: 1rem; }
+.avatar.geprueft { color: var(--geprueft); background: var(--geprueft-grund); }
+.avatar.ausbildung { color: var(--ausbildung); background: var(--ausbildung-grund); }
+.avatar.helfer { color: var(--helfer); background: var(--helfer-grund); }
+.avatar.probe { color: var(--probe); background: var(--probe-grund); }
+.team-text strong { display: block; font-size: 1.02rem; }
+.team-text .hund { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Training eintragen ---------- */
+.schritte { display: flex; gap: 8px; list-style: none; padding: 0; margin: 4px 0 0; }
+.schritte li { flex: 1; text-align: center; font-size: .85rem; padding: 8px; border-radius: 99px; background: var(--chip); color: var(--leise); }
+.schritte li.aktiv { background: var(--akzent); color: var(--auf-akzent); font-weight: 700; }
+.wahl { display: block; width: 100%; text-align: left; margin: 8px 0; padding: 14px; border: 1.5px solid var(--akzent);
+  border-radius: 14px; background: var(--akzent-hell); color: var(--text); cursor: pointer; }
+.wahl span { display: block; margin-top: 2px; }
+
+/* ---------- Aufklappbares ---------- */
+details summary { cursor: pointer; color: var(--akzent); font-weight: 600; padding: 8px 0 0; }
+details.karte > summary { padding: 0; }
+details.eintrag > summary { color: var(--text); padding: 0; list-style: none; font-weight: 400; }
+details.eintrag > summary::-webkit-details-marker { display: none; }
+details.eintrag > summary .klein { display: block; margin-top: 3px; }
+details.eintrag[open] > summary { margin-bottom: 4px; }
+dl { margin: 10px 0 0; }
+dt { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--leise); margin-top: 10px; }
+dd { margin: 2px 0 0; white-space: pre-wrap; }
+.bewertung { margin-top: 14px; padding: 12px 14px; background: var(--akzent-hell); border-radius: 12px; }
+.bewertung h3 { margin-top: 0; }
+.bewerten { margin-top: 12px; padding-top: 6px; border-top: 1px solid var(--linie); }
+.bewerten summary { padding: 8px 0; }
+
+/* ---------- Notizen ---------- */
+.inline { display: flex; gap: 8px; }
+.inline input { margin: 0; }
+.inline button { flex: none; width: 48px; border: 0; border-radius: 12px; background: var(--akzent); color: var(--auf-akzent); font-size: 1.3rem; cursor: pointer; }
+.notizen { list-style: none; padding: 0; margin: 10px 0 0; }
+.notizen li { padding: 10px 0; border-top: 1px solid var(--linie); }
+
+/* ---------- Meldungen ---------- */
+.meldung { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 20; transform: translateX(-50%);
+  max-width: calc(100% - 32px); width: max-content; padding: 10px 16px; border-radius: 12px; background: var(--text); color: var(--grund);
+  font-size: .92rem; font-weight: 600; box-shadow: 0 6px 20px rgba(0, 0, 0, .2); animation: toast 3.2s ease forwards; pointer-events: none; }
+@keyframes toast { 0% { opacity: 0; transform: translate(-50%, 8px); } 8%, 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; } }
+.entwurf { margin: 10px 0 0; padding: 10px 14px; border-radius: 12px; background: var(--hinweis-grund); color: var(--hinweis-text); font-size: .9rem; }
+.entwurf .link { color: inherit; padding: 0 0 0 6px; min-height: 0; text-decoration: underline; }
+
+/* Aufklapp-Pfeil statt Dreieck */
+details > summary { list-style: none; position: relative; padding-right: 26px; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::after { content: '›'; position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
+  font-size: 1.4rem; line-height: 1; color: var(--leise); transition: transform .2s; }
+details[open] > summary::after { transform: translateY(-50%) rotate(90deg); }
+
+/* Symbole */
+.ikon { width: 22px; height: 22px; display: block; }
+.ikon-klein { width: 15px; height: 15px; flex: none; color: var(--akzent); }
+.mit-ikon { display: inline-flex; align-items: center; gap: 5px; vertical-align: -2px; }
+.kopf .logo { color: var(--akzent); }
+.kopf .zurueck .ikon { width: 20px; height: 20px; }
+.kopf .zurueck { padding-bottom: 0; }
+
+/* Ladeanzeige: graue Platzhalter mit leichtem Schimmer */
+.platzhalter div { height: 14px; border-radius: 7px; background: var(--chip); margin: 6px 0; animation: schimmer 1.2s ease-in-out infinite alternate; }
+.platzhalter div:first-child { width: 55%; height: 18px; }
+@keyframes schimmer { from { opacity: .55; } to { opacity: 1; } }
+
+/* Leere Zustände */
+.leer-karte { text-align: center; color: var(--leise); }
+.leer-karte p { margin: 4px 0 12px; }
+.leer-karte .zweit { margin: 0; }
+
+/* "Wie zuletzt" */
+.vorlage { display: block; width: 100%; text-align: left; margin: 0 0 6px; padding: 10px 14px; border: 1.5px dashed var(--akzent);
+  border-radius: 12px; background: transparent; color: var(--akzent); font-weight: 600; cursor: pointer; }
+.vorlage .klein { display: block; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Trainingstag: Einträge als Karten, Trainer bewerten direkt */
+.tag-eintrag { padding: 12px 14px; }
+.tag-eintrag.ich { border-color: var(--akzent); }
+.tag-eintrag-kopf { display: block; color: inherit; text-decoration: none; }
+.tag-eintrag-kopf .klein { margin-top: 2px; }
+.ok { color: var(--geprueft); font-weight: 600; }
+.punkte { letter-spacing: 1px; }
+
+/* Notizen ändern/löschen */
+.notiz-text { white-space: pre-wrap; }
+.notiz-fuss { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; }
+.notiz-knoepfe { margin-left: auto; display: inline-flex; gap: 14px; }
+.notiz-knoepfe .link { min-height: 36px; padding: 6px 0; font-size: .85rem; }
+.knopfzeile { display: flex; align-items: center; gap: 16px; }
+.knopfzeile .haupt { width: auto; flex: 1; margin-top: 10px; }
+.knopfzeile .link { margin-top: 10px; }

@@ -114,12 +114,19 @@ function entwurfSichern(aenderung) {
 }
 function entwurfLoeschen() { try { localStorage.removeItem(entwurfSchluessel()); } catch {} }
 function entwurfEinsetzen(form, paare = []) {
+  // So viele Versteck-Zeilen anlegen wie im Entwurf, dann Felder gleichen Namens der Reihe nach füllen
+  const liste = form.querySelector('.versteck-liste');
+  const anzahl = paare.filter(([k]) => k === 'versteck_person').length;
+  while (liste && liste.children.length < anzahl) liste.insertAdjacentHTML('beforeend', versteckZeile());
+  const position = {};
   for (const [name, wert] of paare) {
     const felder = form.querySelectorAll(`[name="${name}"]`);
-    felder.forEach((f) => {
-      if (f.type === 'checkbox' || f.type === 'radio') { if (f.value === wert) f.checked = true; }
-      else f.value = wert;
-    });
+    if (felder[0]?.type === 'checkbox' || felder[0]?.type === 'radio') {
+      felder.forEach((f) => { if (f.value === wert) f.checked = true; });
+    } else {
+      const i = position[name] = (position[name] ?? -1) + 1;
+      if (felder[i]) felder[i].value = wert;
+    }
   }
 }
 
@@ -166,7 +173,7 @@ function kopf(titel, zurueck = null) {
   return `<header class="kopf">
     ${zurueck ? `<a class="zurueck" href="${zurueck}" aria-label="Zurück">${ikon('zurueck')}</a>` : `<span class="logo">${ikon('pfote')}</span>`}
     <h1>${esc(titel)}</h1>
-    ${ich ? `<a class="avatar-knopf" href="#/profil" aria-label="Mein Profil">${esc(initialen(ich.name))}</a>` : ''}
+    ${ich ? `<a class="avatar-knopf" href="#/team/${ich.id}" aria-label="Mein Profil">${esc(initialen(ich.name))}</a>` : ''}
   </header>
   ${api.modus === 'test' ? '<div class="testbanner"><span>Testmodus · Daten nur in diesem Browser</span></div>' : ''}`;
 }
@@ -174,12 +181,13 @@ function kopf(titel, zurueck = null) {
 // Untere Navigation (Daumen-Reichweite am Handy)
 function tabs() {
   const h = location.hash || '#/';
+  const eigen = h === `#/team/${ich.id}` || h.startsWith(`#/team/${ich.id}/`);
   const punkte = [
-    ['#/', 'teams', 'Teams', h === '#/' || h.startsWith('#/team')],
+    ['#/', 'teams', 'Teams', h === '#/' || (h.startsWith('#/team') && !eigen)],
     ['#/trainings', 'kalender', 'Trainings', h === '#/trainings' || h.startsWith('#/tag')],
     ['#/eintragen', 'plus', 'Eintragen', h.startsWith('#/eintragen'), 'plus'],
     ...(ich.rolle === 'trainer' ? [['#/trainer', 'liste', 'Trainer', h === '#/trainer']] : []),
-    ['#/profil', 'person', 'Profil', h === '#/profil'],
+    [`#/team/${ich.id}`, 'person', 'Profil', eigen],
   ];
   return `<nav class="tabs">${punkte.map(([ziel, ico, text, aktiv, extra = '']) =>
     `<a href="${ziel}" class="${aktiv ? 'aktiv' : ''} ${extra}" ${aktiv ? 'aria-current="page"' : ''}><span class="ico">${ikon(ico)}</span>${text}</a>`).join('')}</nav>`;
@@ -254,23 +262,15 @@ function wendeSucheAn() {
   if (leer) leer.hidden = treffer > 0;
 }
 async function seiteUebersicht() {
-  const [mitglieder, tage] = await Promise.all([api.mitgliederMitHunden(), api.trainingstage()]);
+  const mitglieder = await api.mitgliederMitHunden();
   const wartend = ausgang().length;
   const nummer = (m) => parseInt((m.funkrufname || '').match(/\d+$/)?.[0] ?? '999', 10);
   mitglieder.sort((a, b) => nummer(a) - nummer(b) || a.name.localeCompare(b.name));
   const filterListe = [['alle', 'Alle'], ['geprueft', 'Geprüft'], ['ausbildung', 'Ausbildung'], ['helfer', 'Helfer'], ['probe', 'Probezeit']];
   const sichtbar = mitglieder.filter((m) => filter === 'alle' || etikett(m).klasse === filter);
-  const geprueft = mitglieder.filter((m) => etikett(m).klasse === 'geprueft').length;
   zeige(`${kopf('Teams')}
     <main>
-      <a class="haupt gross" href="#/eintragen">+ Training eintragen</a>
-      <div class="kacheln">
-        <div class="kachel"><b>${mitglieder.length}</b><span>Mitglieder</span></div>
-        <div class="kachel"><b>${geprueft}</b><span>geprüft</span></div>
-        <a class="kachel" href="#/trainings"><b>${tage.length}</b><span>Trainingstage ›</span></a>
-      </div>
       ${wartend ? `<div class="entwurf">${ausgangText(wartend)} und wird automatisch gesendet.</div>` : ''}
-      ${ich.rolle === 'trainer' ? '<a class="zweit" href="#/trainer">Trainer-Bereich</a>' : ''}
       <div class="suchleiste">
         <label class="suchfeld">${ikon('lupe', 'ikon-klein')}<input type="search" id="suche" value="${esc(suche)}"
           placeholder="Name, Hund oder Funkrufname" aria-label="Suchen" autocomplete="off" enterkeyhint="search"></label>
@@ -352,17 +352,45 @@ function verdrahteBewertungen(nachSpeichern) {
 }
 
 // Felder eines Trainingseintrags (Team-Teil); für Neu-Anlage und Bearbeiten
+// Mehrere Versteckpersonen je Eintrag, jeweils mit eigenen Besonderheiten.
+// Ältere Einträge mit nur einer Versteckperson werden in die Liste übernommen.
+const versteckeVon = (e) => Array.isArray(e.verstecke) ? e.verstecke
+  : e.versteckperson || e.versteck_besonderheiten ? [{ person: e.versteckperson || '', besonderheiten: e.versteck_besonderheiten || '' }] : [];
+// Kompakte Zeile je Versteckperson: Nummer · Name · ✕, darunter Besonderheiten (ohne eigene Überschriften)
+const versteckZeile = (v = {}) => `<div class="versteck">
+    <span class="versteck-nr" aria-hidden="true"></span>
+    <input name="versteck_person" value="${esc(v.person)}" placeholder="Name" aria-label="Versteckperson">
+    <button type="button" class="versteck-weg" aria-label="Versteckperson entfernen">✕</button>
+    <input name="versteck_besonderheiten" value="${esc(v.besonderheiten)}" placeholder="Besonderheiten (z. B. erhöht)" aria-label="Besonderheiten Versteck">
+  </div>`;
+const versteckeText = (e) => versteckeVon(e).map((v) =>
+  `${esc(v.person || '?')}${v.besonderheiten ? ' – ' + esc(v.besonderheiten) : ''}`).join('<br>') || '–';
+// "+ Weitere Versteckperson" und "entfernen" in allen Eintragsformularen (neu und bearbeiten)
+app.addEventListener('click', (ev) => {
+  const plus = ev.target.closest('.versteck-plus');
+  const weg = ev.target.closest('.versteck-weg');
+  if (!plus && !weg) return;
+  const form = (plus || weg).form;
+  if (plus) {
+    const liste = form.querySelector('.versteck-liste');
+    liste.insertAdjacentHTML('beforeend', versteckZeile());
+    liste.lastElementChild.querySelector('input').focus();
+  } else weg.closest('.versteck').remove();
+  form.dispatchEvent(new Event('input'));
+});
+
 function eintragFelder(e, hunde) {
   const w = (k) => esc(e[k]);
   return `${hunde.length > 1 ? `<label>Hund<select name="hund_id">${hunde.map((h) =>
       `<option value="${h.id}" ${e.hund_id === h.id ? 'selected' : ''}>${esc(h.name)}</option>`).join('')}</select></label>`
     : hunde.length === 1 ? `<input type="hidden" name="hund_id" value="${hunde[0].id}"><p>Hund: <strong>${esc(hunde[0].name)}</strong></p>`
     : '<p class="klein">Kein Hund hinterlegt – Eintrag als Helfer.</p>'}
-    <label>Versteckperson(en)<input name="versteckperson" value="${w('versteckperson')}"></label>
-    <label>Besonderheiten Versteck<input name="versteck_besonderheiten" value="${w('versteck_besonderheiten')}"></label>
+    <fieldset class="verstecke"><legend>Versteckpersonen</legend>
+      <div class="versteck-liste">${(versteckeVon(e).length ? versteckeVon(e) : [{}]).map(versteckZeile).join('')}</div>
+      <button type="button" class="link versteck-plus">+ Weitere Versteckperson</button>
+    </fieldset>
     <label>Wie hat der Hund gearbeitet?<textarea name="arbeit_hund" rows="3">${w('arbeit_hund')}</textarea></label>
     <fieldset><legend>Selbstbewertung (1 = schwach, 5 = sehr gut)</legend>${skala('selbstbewertung', e.selbstbewertung)}</fieldset>
-    <label>Kommentar zur Selbstbewertung<textarea name="selbst_kommentar" rows="2">${w('selbst_kommentar')}</textarea></label>
     <label>Mein Ziel<input name="ziel" value="${w('ziel')}"></label>
     <fieldset><legend>Ziel erreicht?</legend>
       <div class="skala drei">${['ja', 'teilweise', 'nein'].map((z) =>
@@ -371,8 +399,13 @@ function eintragFelder(e, hunde) {
     <label>Notiz<textarea name="notiz" rows="2">${w('notiz')}</textarea></label>`;
 }
 const eintragAusForm = (form) => {
-  const d = leerZuNull(formDaten(form));
-  return { ...d, hund_id: d.hund_id ?? null, selbstbewertung: d.selbstbewertung ? Number(d.selbstbewertung) : null,
+  const fd = new FormData(form);
+  const besonderheiten = fd.getAll('versteck_besonderheiten');
+  const verstecke = fd.getAll('versteck_person')
+    .map((person, i) => ({ person: person.trim(), besonderheiten: (besonderheiten[i] || '').trim() }))
+    .filter((v) => v.person || v.besonderheiten);
+  const { versteck_person, versteck_besonderheiten, ...d } = leerZuNull(formDaten(form));
+  return { ...d, verstecke, hund_id: d.hund_id ?? null, selbstbewertung: d.selbstbewertung ? Number(d.selbstbewertung) : null,
     ziel_erreicht: d.ziel_erreicht ?? null };
 };
 
@@ -383,9 +416,12 @@ function tagFelder(t = {}) {
     <fieldset><legend>Wetter &amp; Umgebung</legend>
       <div class="chips">${WETTER.map((w) => `<label class="chip"><input type="checkbox" name="wetter" value="${w}" ${t.wetter?.includes(w) ? 'checked' : ''}><span>${w}</span></label>`).join('')}</div>
     </fieldset>
-    <label>Besonderheiten Wetter<input name="wetter_notiz" value="${esc(t.wetter_notiz)}"></label>
-    <label>Gelände<textarea name="gelaende" rows="2">${esc(t.gelaende)}</textarea></label>
-    <label>Übungsschwerpunkt<textarea name="schwerpunkt" rows="2">${esc(t.schwerpunkt)}</textarea></label>`;
+    <details class="mehr" ${t.wetter_notiz || t.gelaende || t.schwerpunkt ? 'open' : ''}>
+      <summary>Weitere Angaben <span class="klein">Gelände, Schwerpunkt, Wetter-Details</span></summary>
+      <label>Besonderheiten Wetter<input name="wetter_notiz" value="${esc(t.wetter_notiz)}"></label>
+      <label>Gelände<textarea name="gelaende" rows="2">${esc(t.gelaende)}</textarea></label>
+      <label>Übungsschwerpunkt<textarea name="schwerpunkt" rows="2">${esc(t.schwerpunkt)}</textarea></label>
+    </details>`;
 }
 const tagAusForm = (form) => {
   const d = leerZuNull(formDaten(form));
@@ -434,7 +470,7 @@ async function seiteEintragen(vorTagId = null) {
       <section id="schritt2" class="karte" hidden>
         <p class="klein" id="tag-info"></p>
         <form id="f-eintrag">
-          ${letzter && (letzter.ziel || letzter.versteckperson) ? `<button type="button" class="vorlage" id="wie-zuletzt-eintrag">↺ Ziel und Versteckperson wie zuletzt<span class="klein">${esc([letzter.ziel, letzter.versteckperson].filter(Boolean).join(' · '))}</span></button>` : ''}
+          ${letzter && (letzter.ziel || versteckeVon(letzter).length) ? `<button type="button" class="vorlage" id="wie-zuletzt-eintrag">↺ Ziel und Versteckpersonen wie zuletzt<span class="klein">${esc([letzter.ziel, ...versteckeVon(letzter).map((v) => v.person)].filter(Boolean).join(' · '))}</span></button>` : ''}
           ${eintragFelder({}, meine)}
           <button class="haupt">Speichern</button>
           <button type="button" class="link" id="zurueck1">Zurück zum Trainingstag</button>
@@ -475,14 +511,15 @@ async function seiteEintragen(vorTagId = null) {
   document.getElementById('entwurf-weg').addEventListener('click', () => { entwurfLoeschen(); seiteEintragen(); });
   // "Wie zuletzt": Felder aus dem letzten eigenen Eintrag übernehmen (danach frei änderbar)
   const uebernimm = (form, felder) => {
-    for (const [name, wert] of Object.entries(felder)) if (wert) form[name].value = wert;
+    for (const [name, wert] of Object.entries(felder)) if (wert) { form[name].value = wert; form[name].closest('details.mehr')?.setAttribute('open', ''); }
     form.dispatchEvent(new Event('input'));
   };
   document.getElementById('wie-zuletzt-tag')?.addEventListener('click', (ev) => {
     uebernimm(fTag, { ort: letzter.tag.ort, gelaende: letzter.tag.gelaende }); ev.currentTarget.remove();
   });
   document.getElementById('wie-zuletzt-eintrag')?.addEventListener('click', (ev) => {
-    uebernimm(fE, { ziel: letzter.ziel, versteckperson: letzter.versteckperson, versteck_besonderheiten: letzter.versteck_besonderheiten });
+    if (versteckeVon(letzter).length) fE.querySelector('.versteck-liste').innerHTML = versteckeVon(letzter).map(versteckZeile).join('');
+    uebernimm(fE, { ziel: letzter.ziel });
     ev.currentTarget.remove();
   });
   fTag.addEventListener('input', () => entwurfSichern({ tag: [...new FormData(fTag)] }));
@@ -535,7 +572,7 @@ async function seiteTeam(mid, offenerEintrag = null) {
   const eintraege = await api.eintraegeVon(mid);
   const notizen = Object.fromEntries(await Promise.all(m.hunde.map(async (h) => [h.id, await api.hundenotizen(h.id)])));
 
-  zeige(`${kopf(m.name, '#/')}
+  zeige(`${kopf(m.id === ich.id ? 'Mein Profil' : m.name, '#/')}
     <main>
       <section class="karte">
         <div class="zeile"><strong>${esc(m.funkrufname || 'ohne Funkrufname')}</strong>${etikettHtml(m)}</div>
@@ -586,14 +623,12 @@ async function seiteTeam(mid, offenerEintrag = null) {
           <summary><strong>${datum(e.tag.beginn)}</strong> · ${esc(e.tag.ort)}
             <span class="klein">${e.hund ? hundName(e.hund.name) + ' · ' : ''}Selbst: ${punkte(e.selbstbewertung)}${e.ziel_erreicht ? ' · Ziel: ' + e.ziel_erreicht : ''}</span></summary>
           <dl>
-            <dt>Trainingstag</dt><dd><a href="#/tag/${e.tag.id}">alle Einträge dieses Tages</a></dd>
-            <dt>Wetter</dt><dd>${esc(e.tag.wetter.join(', ') || '–')}${e.tag.wetter_notiz ? ' – ' + esc(e.tag.wetter_notiz) : ''}</dd>
-            <dt>Gelände</dt><dd>${esc(e.tag.gelaende || '–')}</dd>
-            <dt>Schwerpunkt</dt><dd>${esc(e.tag.schwerpunkt || '–')}</dd>
-            <dt>Versteckperson</dt><dd>${esc(e.versteckperson || '–')}${e.versteck_besonderheiten ? ' – ' + esc(e.versteck_besonderheiten) : ''}</dd>
-            <dt>Arbeit des Hundes</dt><dd>${esc(e.arbeit_hund || '–')}</dd>
-            <dt>Selbstbewertung</dt><dd>${punkte(e.selbstbewertung)} ${esc(e.selbst_kommentar || '')}</dd>
-            <dt>Ziel</dt><dd>${esc(e.ziel || '–')}${e.ziel_erreicht ? ' (' + e.ziel_erreicht + ')' : ''}</dd>
+            <p class="klein tag-zeile">${[e.tag.wetter.join(', '), e.tag.schwerpunkt].filter(Boolean).map(esc).join(' · ')}
+              <a href="#/tag/${e.tag.id}">Trainingstag ›</a></p>
+            ${versteckeVon(e).length ? `<dt>${versteckeVon(e).length > 1 ? 'Versteckpersonen' : 'Versteckperson'}</dt><dd>${versteckeText(e)}</dd>` : ''}
+            ${e.arbeit_hund ? `<dt>Arbeit des Hundes</dt><dd>${esc(e.arbeit_hund)}</dd>` : ''}
+            ${e.selbst_kommentar ? `<dt>Selbstbewertung</dt><dd>${punkte(e.selbstbewertung)} ${esc(e.selbst_kommentar)}</dd>` : ''}
+            ${e.ziel ? `<dt>Ziel</dt><dd>${esc(e.ziel)}${e.ziel_erreicht ? ' (' + e.ziel_erreicht + ')' : ''}</dd>` : ''}
             ${e.notiz ? `<dt>Notiz</dt><dd>${esc(e.notiz)}</dd>` : ''}
           </dl>
           ${e.bewertung ? `<div class="bewertung"><h3>Trainerbewertung <span class="klein">(nur für dich und die Trainer)</span></h3>
@@ -611,10 +646,12 @@ async function seiteTeam(mid, offenerEintrag = null) {
             </form></details>
             <button type="button" class="link gefahr" data-loeschen="${e.id}">Eintrag löschen</button>` : ''}
         </details>`).join('') : `<div class="karte leer-karte"><p>Noch keine Trainingseinträge.</p>${m.id === ich.id ? '<a class="zweit" href="#/eintragen">+ Erstes Training eintragen</a>' : ''}</div>`}
+      ${m.id === ich.id ? profilFuss() : ''}
       </section>
     </main>`);
   verdrahteKopf();
 
+  if (m.id === ich.id) verdrahteProfilFuss();
   if (offenerEintrag) document.getElementById(`e-${offenerEintrag}`)?.scrollIntoView();
   const fertig = (text, eid = null) => { sessionStorage.setItem('rhs-meldung', text); return seiteTeam(mid, eid); };
   document.getElementById('f-neuer-hund')?.addEventListener('submit', (ev) => {
@@ -726,7 +763,6 @@ async function seiteTrainings() {
   const tage = await api.trainingstageMitTeilnehmern();
   zeige(`${kopf('Trainings')}
     <main>
-      <a class="haupt gross" href="#/eintragen">+ Training eintragen</a>
       ${tage.map((t) => `<section class="karte training">
         <a class="training-kopf" href="#/tag/${t.id}">
           <div class="zeile"><strong>${esc(t.ort)}</strong><span class="klein">${datum(t.beginn)} ›</span></div>
@@ -797,30 +833,20 @@ async function seiteTag(tid) {
 }
 
 // ---------- Mein Profil ----------
-async function seiteProfil() {
-  const m = await api.mitglied(ich.id);
+// Unten auf der eigenen Team-Seite: Offline-Ausgang, Installationshinweis, Abmelden
+function profilFuss() {
   const wartend = ausgang().length;
   const iphone = /iphone|ipad/i.test(navigator.userAgent);
   const installiert = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-  zeige(`${kopf('Mein Profil', '#/')}
-    <main>
-      <section class="karte">
-        <div class="zeile"><strong>${esc(m.name)}</strong>${etikettHtml(m)}</div>
-        <div class="klein">${esc(m.funkrufname || 'ohne Funkrufname')} · ${ich.rolle === 'trainer' ? 'Trainer:in' : 'Mitglied'}</div>
-        ${m.hunde.map((h) => `<div>${hundName(h.name)}</div>${pruefungsHinweis(h)}`).join('')}
-        <a class="zweit" href="#/team/${m.id}" style="margin-top:12px">Meine Daten, Hunde und Trainings</a>
-      </section>
-      ${wartend ? `<section class="karte"><h2>Offline gespeichert</h2>
-        <p>${ausgangText(wartend)}. Er wird automatisch gesendet, sobald du wieder Netz hast.</p>
-        <button class="haupt" id="jetzt-senden">Jetzt senden</button></section>` : ''}
-      ${installiert ? '' : `<section class="karte"><h2>Als App aufs Handy</h2>
-        <p class="klein">${iphone ? 'In Safari unten auf das Teilen-Symbol tippen, dann „Zum Home-Bildschirm“.'
-          : 'Im Browser-Menü ⋮ „App installieren“ oder „Zum Startbildschirm hinzufügen“ wählen.'}
-          Danach startet das Trainingsbuch wie eine App, auch ohne Netz.</p></section>`}
-      <button class="haupt" id="abmelden">Abmelden</button>
-      ${api.modus === 'test' ? '<button type="button" class="link" id="reset">Testdaten auf Anfang zurücksetzen</button>' : ''}
-    </main>`);
-  verdrahteKopf();
+  return `${wartend ? `<section class="karte"><h2>Offline gespeichert</h2>
+      <p>${ausgangText(wartend)}. Er wird automatisch gesendet, sobald du wieder Netz hast.</p>
+      <button class="haupt" id="jetzt-senden">Jetzt senden</button></section>` : ''}
+    ${installiert ? '' : `<p class="klein hinweis">Als App aufs Handy: ${iphone ? 'in Safari Teilen-Symbol → „Zum Home-Bildschirm“.'
+      : 'im Browser-Menü ⋮ → „App installieren“.'}</p>`}
+    <button class="haupt zweitrangig" id="abmelden">Abmelden</button>
+    ${api.modus === 'test' ? '<button type="button" class="link" id="reset">Testdaten auf Anfang zurücksetzen</button>' : ''}`;
+}
+function verdrahteProfilFuss() {
   document.getElementById('jetzt-senden')?.addEventListener('click', async () => {
     await sendeAusgang();
     if (ausgang().length) alert(navigator.onLine ? 'Senden hat nicht geklappt. Bitte später noch einmal versuchen.' : 'Noch keine Internetverbindung.');
@@ -873,7 +899,7 @@ async function route() {
     } else if (hash.startsWith('#/tag/')) {
       await seiteTag(hash.slice(6));
     } else if (hash === '#/profil') {
-      await seiteProfil();
+      location.hash = `#/team/${ich.id}`; return;
     } else if (hash === '#/trainer') {
       await seiteTrainer();
     } else if (hash.startsWith('#/team/')) {

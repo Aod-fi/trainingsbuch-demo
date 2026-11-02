@@ -51,12 +51,13 @@ function startdaten() {
     erstellt_von: 'm2', erstellt_am: jetzt(),
   };
   const eintraege = [
-    { id: 'e1', trainingstag_id: 't1', mitglied_id: 'm2', hund_id: 'h2', versteckperson: 'Markus',
-      versteck_besonderheiten: 'Liegend unter Plane', arbeit_hund: 'Sehr motiviert, gute Querschläge',
+    { id: 'e1', trainingstag_id: 't1', mitglied_id: 'm2', hund_id: 'h2', verstecke: [
+        { person: 'Markus', besonderheiten: 'Liegend unter Plane' }, { person: 'Mia', besonderheiten: 'Erhöht im Hochsitz' }],
+      arbeit_hund: 'Sehr motiviert, gute Querschläge',
       selbstbewertung: 4, selbst_kommentar: 'Taktik am Hang verbessern', ziel: 'Ruhiger anzeigen',
       ziel_erreicht: 'teilweise', notiz: '', erstellt_am: jetzt() },
-    { id: 'e2', trainingstag_id: 't1', mitglied_id: 'm4', hund_id: 'h4', versteckperson: 'Anna',
-      versteck_besonderheiten: '', arbeit_hund: 'Anfangs unkonzentriert, dann gut',
+    { id: 'e2', trainingstag_id: 't1', mitglied_id: 'm4', hund_id: 'h4', verstecke: [{ person: 'Anna', besonderheiten: '' }],
+      arbeit_hund: 'Anfangs unkonzentriert, dann gut',
       selbstbewertung: 3, selbst_kommentar: '', ziel: 'Freiverweis üben',
       ziel_erreicht: 'ja', notiz: '', erstellt_am: jetzt() },
   ];

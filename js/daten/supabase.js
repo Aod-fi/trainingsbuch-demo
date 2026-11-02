@@ -54,6 +54,16 @@ export const api = {
     const me = await this.ich();
     return pruefe(await sb.from('trainingstage').insert({ ...tag, erstellt_von: me.id }).select().single());
   },
+  async trainingstageMitTeilnehmern() {
+    const rows = pruefe(await sb.from('trainingstage')
+      .select('*, trainingseintraege(id, mitglied_id, mitglied:mitglieder(name), hund:hunde(name))')
+      .order('beginn', { ascending: false }));
+    return rows.map(({ trainingseintraege, ...t }) => ({
+      ...t,
+      teilnehmer: trainingseintraege.map((e) => ({ eintrag_id: e.id, mitglied_id: e.mitglied_id,
+        name: e.mitglied?.name || '?', hund: e.hund?.name || null })).sort((a, b) => a.name.localeCompare(b.name)),
+    }));
+  },
   async trainingstag(tid) {
     return pruefe(await sb.from('trainingstage').select('*').eq('id', tid).maybeSingle());
   },

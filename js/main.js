@@ -53,6 +53,8 @@ const IKONEN = {
   liste: '<rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 3.5h6v3H9zM9 11h6M9 15h4"/>',
   person: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
   zurueck: '<path d="M15 5l-7 7 7 7"/>',
+  kalender: '<rect x="4" y="5" width="16" height="16" rx="2.5"/><path d="M8 3v4M16 3v4M4 10h16"/>',
+  lupe: '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
 };
 const ikon = (name, klasse = 'ikon') => `<svg class="${klasse}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IKONEN[name]}</svg>`;
 const hundName = (name) => `<span class="mit-ikon">${ikon('pfote', 'ikon-klein')}${esc(name)}</span>`;
@@ -173,7 +175,8 @@ function kopf(titel, zurueck = null) {
 function tabs() {
   const h = location.hash || '#/';
   const punkte = [
-    ['#/', 'teams', 'Teams', h === '#/' || h.startsWith('#/team') || h.startsWith('#/tag')],
+    ['#/', 'teams', 'Teams', h === '#/' || h.startsWith('#/team')],
+    ['#/trainings', 'kalender', 'Trainings', h === '#/trainings' || h.startsWith('#/tag')],
     ['#/eintragen', 'plus', 'Eintragen', h.startsWith('#/eintragen'), 'plus'],
     ...(ich.rolle === 'trainer' ? [['#/trainer', 'liste', 'Trainer', h === '#/trainer']] : []),
     ['#/profil', 'person', 'Profil', h === '#/profil'],
@@ -238,6 +241,18 @@ function seiteLogin() {
 
 // ---------- Übersicht ----------
 let filter = 'alle';
+let suche = '';
+// Suche ohne Neuaufbau der Seite, damit die Tastatur offen bleibt
+function wendeSucheAn() {
+  const w = suche.trim().toLowerCase();
+  let treffer = 0;
+  app.querySelectorAll('[data-such]').forEach((li) => {
+    const passt = !w || li.dataset.such.includes(w);
+    li.hidden = !passt; if (passt) treffer++;
+  });
+  const leer = app.querySelector('#keine-treffer');
+  if (leer) leer.hidden = treffer > 0;
+}
 async function seiteUebersicht() {
   const [mitglieder, tage] = await Promise.all([api.mitgliederMitHunden(), api.trainingstage()]);
   const wartend = ausgang().length;
@@ -252,14 +267,18 @@ async function seiteUebersicht() {
       <div class="kacheln">
         <div class="kachel"><b>${mitglieder.length}</b><span>Mitglieder</span></div>
         <div class="kachel"><b>${geprueft}</b><span>geprüft</span></div>
-        <div class="kachel"><b>${tage.length}</b><span>Trainingstage</span></div>
+        <a class="kachel" href="#/trainings"><b>${tage.length}</b><span>Trainingstage ›</span></a>
       </div>
       ${wartend ? `<div class="entwurf">${ausgangText(wartend)} und wird automatisch gesendet.</div>` : ''}
       ${ich.rolle === 'trainer' ? '<a class="zweit" href="#/trainer">Trainer-Bereich</a>' : ''}
-      <div class="filter">${filterListe.map(([k, t]) =>
-        `<button data-filter="${k}" class="${filter === k ? 'aktiv' : ''}">${t}</button>`).join('')}</div>
+      <div class="suchleiste">
+        <label class="suchfeld">${ikon('lupe', 'ikon-klein')}<input type="search" id="suche" value="${esc(suche)}"
+          placeholder="Name, Hund oder Funkrufname" aria-label="Suchen" autocomplete="off" enterkeyhint="search"></label>
+        <div class="filter">${filterListe.map(([k, t]) =>
+          `<button data-filter="${k}" class="${filter === k ? 'aktiv' : ''}">${t}</button>`).join('')}</div>
+      </div>
       <ul class="liste">${sichtbar.map((m) => `
-        <li><a href="#/team/${m.id}" class="${m.id === ich.id ? 'ich' : ''}">
+        <li data-such="${esc([m.name, m.funkrufname, ...m.hunde.map((h) => h.name)].filter(Boolean).join(' ').toLowerCase())}"><a href="#/team/${m.id}" class="${m.id === ich.id ? 'ich' : ''}">
           <div class="avatar ${etikett(m).klasse}">${nummer(m) < 999 ? nummer(m) : esc(initialen(m.name))}</div>
           <div class="team-text">
             <strong>${esc(m.name)}${m.id === ich.id ? ' <span class="klein">(ich)</span>' : ''}</strong>
@@ -267,15 +286,13 @@ async function seiteUebersicht() {
             ${pruefungsHinweis(m.hunde.find((h) => h.status === 'geprueft'))}
           </div>
           ${etikettHtml(m)}
-        </a></li>`).join('') || '<li class="leer">Keine Treffer</li>'}
+        </a></li>`).join('')}
+        <li class="leer" id="keine-treffer" ${sichtbar.length ? 'hidden' : ''}>Keine Treffer</li>
       </ul>
-      ${tage.length ? `<h2 class="abschnitt">Letzte Trainings</h2>
-        <ul class="liste kompakt">${tage.slice(0, 5).map((t) => `<li><a href="#/tag/${t.id}">
-          <div class="zeile"><strong>${esc(t.ort)}</strong><span class="klein">${datum(t.beginn)}</span></div>
-          ${t.schwerpunkt ? `<div class="klein">${esc(t.schwerpunkt)}</div>` : ''}
-        </a></li>`).join('')}</ul>` : ''}
     </main>`);
   verdrahteKopf();
+  wendeSucheAn();
+  document.getElementById('suche').addEventListener('input', (ev) => { suche = ev.target.value; wendeSucheAn(); });
   app.querySelectorAll('[data-filter]').forEach((b) => b.addEventListener('click', () => {
     filter = b.dataset.filter; seiteUebersicht();
   }));
@@ -393,7 +410,10 @@ async function seiteEintragen(vorTagId = null) {
   zeige(`${kopf('Training eintragen', '#/')}
     <main>
       ${offline ? '<div class="entwurf">Kein Netz: Du kannst trotzdem eintragen. Der Eintrag wird gesendet, sobald wieder Netz da ist.</div>' : ''}
-      <ol class="schritte"><li class="aktiv" id="s1">1 Trainingstag</li><li id="s2">2 Mein Team</li></ol>
+      <div class="fortschritt" role="status">
+        <div class="balken"><span id="balken" style="width:50%"></span></div>
+        <p id="schritt-text"><strong>Schritt 1 von 2:</strong> Wann und wo? Gilt für alle Teams dieses Trainings.</p>
+      </div>
       <div class="entwurf" id="entwurf-hinweis" hidden>Angefangener Eintrag wiederhergestellt.
         <button type="button" class="link" id="entwurf-weg">Verwerfen</button></div>
 
@@ -429,8 +449,8 @@ async function seiteEintragen(vorTagId = null) {
     entwurfSichern({ tagId: t.id, lokalerTag: t.lokal ? t : null });
     document.getElementById('schritt1').hidden = true;
     document.getElementById('schritt2').hidden = false;
-    document.getElementById('s1').classList.remove('aktiv');
-    document.getElementById('s2').classList.add('aktiv');
+    document.getElementById('balken').style.width = '100%';
+    document.getElementById('schritt-text').innerHTML = '<strong>Schritt 2 von 2:</strong> Dein Team: wie lief es?';
     document.getElementById('tag-info').textContent = `${t.ort} · ${datumZeit(t.beginn)}`;
     window.scrollTo(0, 0);
   };
@@ -701,13 +721,33 @@ async function seiteTrainer() {
   });
 }
 
+// ---------- Alle Trainings ----------
+async function seiteTrainings() {
+  const tage = await api.trainingstageMitTeilnehmern();
+  zeige(`${kopf('Trainings')}
+    <main>
+      <a class="haupt gross" href="#/eintragen">+ Training eintragen</a>
+      ${tage.map((t) => `<section class="karte training">
+        <a class="training-kopf" href="#/tag/${t.id}">
+          <div class="zeile"><strong>${esc(t.ort)}</strong><span class="klein">${datum(t.beginn)} ›</span></div>
+          ${t.schwerpunkt ? `<div class="klein">Schwerpunkt: ${esc(t.schwerpunkt)}</div>` : ''}
+          ${t.wetter.length ? `<div class="klein">${esc(t.wetter.join(', '))}</div>` : ''}
+        </a>
+        <div class="teilnehmer">${t.teilnehmer.length ? t.teilnehmer.map((p) =>
+          `<a class="person ${p.mitglied_id === ich.id ? 'ich' : ''}" href="#/team/${p.mitglied_id}/${p.eintrag_id}">${esc(p.name)}${p.hund ? ` <span class="klein">· ${esc(p.hund)}</span>` : ''}</a>`).join('')
+          : '<span class="klein">Noch keine Einträge</span>'}</div>
+      </section>`).join('') || '<div class="karte leer-karte"><p>Noch keine Trainings.</p></div>'}
+    </main>`);
+  verdrahteKopf();
+}
+
 // ---------- Trainingstag ----------
 async function seiteTag(tid) {
   const t = await api.trainingstag(tid);
   if (!t) { zeige(`${kopf('Nicht gefunden', '#/')}`); verdrahteKopf(); return; }
   const eintraege = await api.eintraegeVomTag(tid);
   const darfAendern = ich.rolle === 'trainer' || t.erstellt_von === ich.id;
-  zeige(`${kopf(t.ort, '#/')}
+  zeige(`${kopf(t.ort, '#/trainings')}
     <main>
       <section class="karte">
         <div class="zeile"><strong>${datumZeit(t.beginn)}</strong></div>
@@ -827,6 +867,9 @@ async function route() {
       abmeldenVonBeobachtung = api.beobachte(() => { if (location.hash === '#/' || location.hash === '') seiteUebersicht(); });
     } else if (hash.startsWith('#/eintragen')) {
       await seiteEintragen(hash.split('/')[2] || null);
+    } else if (hash === '#/trainings') {
+      await seiteTrainings();
+      abmeldenVonBeobachtung = api.beobachte(() => { if (location.hash === '#/trainings') seiteTrainings(); });
     } else if (hash.startsWith('#/tag/')) {
       await seiteTag(hash.slice(6));
     } else if (hash === '#/profil') {

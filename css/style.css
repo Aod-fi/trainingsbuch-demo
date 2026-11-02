@@ -160,9 +160,12 @@ legend { font-size: .88rem; font-weight: 600; color: var(--leise); margin-bottom
   background: var(--chip); font-weight: 700; transition: background .15s; }
 
 /* Filter als Pillen, bleiben beim Scrollen oben */
-.filter { position: sticky; top: calc(64px + env(safe-area-inset-top)); z-index: 4; display: flex; gap: 8px;
-  overflow-x: auto; padding: 6px 0 8px; margin: 0 -16px; padding-left: 16px; padding-right: 16px;
-  background: color-mix(in srgb, var(--grund) 88%, transparent); scrollbar-width: none; }
+.suchleiste { position: sticky; top: calc(64px + env(safe-area-inset-top)); z-index: 4; margin: 0 -16px; padding: 6px 16px 2px;
+  background: color-mix(in srgb, var(--grund) 90%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.suchfeld { position: relative; margin: 0 0 6px; }
+.suchfeld .ikon-klein { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--leise); width: 17px; height: 17px; }
+.suchfeld input { margin: 0; padding-left: 40px; background: var(--karte); border: 1px solid var(--linie); }
+.filter { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 8px; scrollbar-width: none; }
 .filter::-webkit-scrollbar { display: none; }
 .filter button { flex: none; border: 1px solid var(--linie); background: var(--karte); color: var(--text);
   border-radius: 99px; padding: 7px 14px; font-size: .88rem; cursor: pointer; }
@@ -189,9 +192,11 @@ legend { font-size: .88rem; font-weight: 600; color: var(--leise); margin-bottom
 .team-text .hund { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- Training eintragen ---------- */
-.schritte { display: flex; gap: 8px; list-style: none; padding: 0; margin: 4px 0 0; }
-.schritte li { flex: 1; text-align: center; font-size: .85rem; padding: 8px; border-radius: 99px; background: var(--chip); color: var(--leise); }
-.schritte li.aktiv { background: var(--akzent); color: var(--auf-akzent); font-weight: 700; }
+.fortschritt { margin: 4px 0 0; }
+.fortschritt .balken { height: 6px; border-radius: 99px; background: var(--chip); overflow: hidden; }
+.fortschritt .balken span { display: block; height: 100%; border-radius: 99px; background: var(--akzent); transition: width .3s ease; }
+.fortschritt p { margin: 8px 2px 0; font-size: .92rem; color: var(--leise); }
+.fortschritt strong { color: var(--text); }
 .wahl { display: block; width: 100%; text-align: left; margin: 8px 0; padding: 14px; border: 1.5px solid var(--akzent);
   border-radius: 14px; background: var(--akzent-hell); color: var(--text); cursor: pointer; }
 .wahl span { display: block; margin-top: 2px; }
@@ -272,3 +277,12 @@ details[open] > summary::after { transform: translateY(-50%) rotate(90deg); }
 .knopfzeile { display: flex; align-items: center; gap: 16px; }
 .knopfzeile .haupt { width: auto; flex: 1; margin-top: 10px; }
 .knopfzeile .link { margin-top: 10px; }
+
+/* Trainings-Übersicht */
+a.kachel { color: inherit; text-decoration: none; }
+.training { padding: 14px; }
+.training-kopf { display: block; color: inherit; text-decoration: none; }
+.teilnehmer { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--linie); }
+.person { display: inline-block; padding: 6px 12px; border-radius: 99px; background: var(--chip); color: var(--text); text-decoration: none; font-size: .9rem; font-weight: 600; }
+.person.ich { background: var(--akzent-hell); color: var(--akzent); }
+.person .klein { font-weight: 400; }

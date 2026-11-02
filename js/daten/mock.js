@@ -139,6 +139,19 @@ const roh = {
     d.trainingstage.push(neu); speichern(d); melde();
     return neu;
   },
+  // Alle Trainingstage mit Teilnehmenden (Name, Hund, Eintrag), neueste zuerst
+  async trainingstageMitTeilnehmern() {
+    brauche(ich());
+    const d = laden();
+    return d.trainingstage.map((t) => ({
+      ...t,
+      teilnehmer: d.trainingseintraege.filter((e) => e.trainingstag_id === t.id).map((e) => ({
+        eintrag_id: e.id, mitglied_id: e.mitglied_id,
+        name: d.mitglieder.find((m) => m.id === e.mitglied_id)?.name || '?',
+        hund: d.hunde.find((h) => h.id === e.hund_id)?.name || null,
+      })).sort((a, b) => a.name.localeCompare(b.name)),
+    })).sort((a, b) => b.beginn.localeCompare(a.beginn));
+  },
   async trainingstag(tid) {
     brauche(ich());
     return laden().trainingstage.find((t) => t.id === tid) || null;

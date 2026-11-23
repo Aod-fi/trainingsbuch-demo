@@ -35,7 +35,8 @@ export const api = {
     return rows.map((m) => ({ ...m, hunde: m.hunde.filter((h) => h.aktiv) }));
   },
   async mitglied(mid) {
-    const m = pruefe(await sb.from('mitglieder').select('*, hunde(*)').eq('id', mid).single());
+    const m = pruefe(await sb.from('mitglieder').select('*, hunde(*)').eq('id', mid).maybeSingle());
+    if (!m) return null;
     return { ...m, hunde: m.hunde.filter((h) => h.aktiv) };
   },
   async aendereMitglied(mid, felder) {

@@ -23,6 +23,9 @@ const BEWERTUNG = [['struktur_hf', 'Struktur HF (Taktik/Suche)'], ['suchverhalte
   ['lenkbarkeit', 'Lenkbarkeit'], ['abstand_vp', 'Abstand bei Versteckperson']];
 const STATUS = [['probezeit', 'in Probezeit'], ['helfer', 'Helfer ohne Hund'], ['hundefuehrer', 'Hundeführer:in']];
 
+// Trainingsart je Trainingstag (Wunsch der Staffel)
+const ARTEN = ['Suche', 'Unterordnung', 'Unterordnung & Geräte'];
+
 const WETTER = ['windstill', 'wechselnder Wind', 'starker Wind', 'trocken', 'sonnig', 'warm',
   'nass', 'kalt', 'leichter Regen', 'starker Regen', 'Schneefall', 'Schnee'];
 
@@ -379,6 +382,9 @@ app.addEventListener('click', (ev) => {
   form.dispatchEvent(new Event('input'));
 });
 
+// Früher gab es zusätzlich "Kommentar zur Selbstbewertung"; ältere Einträge zeigen ihn als Teil der Notiz
+const notizVon = (e) => [e.selbst_kommentar, e.notiz].filter(Boolean).join(' · ');
+
 function eintragFelder(e, hunde) {
   const w = (k) => esc(e[k]);
   return `${hunde.length > 1 ? `<label>Hund<select name="hund_id">${hunde.map((h) =>
@@ -396,7 +402,7 @@ function eintragFelder(e, hunde) {
       <div class="skala drei">${['ja', 'teilweise', 'nein'].map((z) =>
         `<label><input type="radio" name="ziel_erreicht" value="${z}" ${e.ziel_erreicht === z ? 'checked' : ''}><span>${z}</span></label>`).join('')}</div>
     </fieldset>
-    <label>Notiz<textarea name="notiz" rows="2">${w('notiz')}</textarea></label>`;
+    <label>Notiz<textarea name="notiz" rows="2">${esc(notizVon(e))}</textarea></label>`;
 }
 const eintragAusForm = (form) => {
   const fd = new FormData(form);
@@ -413,6 +419,10 @@ const eintragAusForm = (form) => {
 function tagFelder(t = {}) {
   return `<label>Datum und Uhrzeit<input name="beginn" type="datetime-local" value="${zuLokalInput(t.beginn || new Date())}" required></label>
     <label>Ort<input name="ort" required placeholder="z. B. Waldstück Nord" value="${esc(t.ort)}"></label>
+    <fieldset><legend>Trainingsart</legend>
+      <div class="skala drei art-wahl">${ARTEN.map((a) =>
+        `<label><input type="radio" name="art" value="${a}" ${t.art === a ? 'checked' : ''}><span>${esc(a)}</span></label>`).join('')}</div>
+    </fieldset>
     <fieldset><legend>Wetter &amp; Umgebung</legend>
       <div class="chips">${WETTER.map((w) => `<label class="chip"><input type="checkbox" name="wetter" value="${w}" ${t.wetter?.includes(w) ? 'checked' : ''}><span>${w}</span></label>`).join('')}</div>
     </fieldset>
@@ -448,7 +458,7 @@ async function seiteEintragen(vorTagId = null) {
       ${offline ? '<div class="entwurf">Kein Netz: Du kannst trotzdem eintragen. Der Eintrag wird gesendet, sobald wieder Netz da ist.</div>' : ''}
       <div class="fortschritt" role="status">
         <div class="balken"><span id="balken" style="width:50%"></span></div>
-        <p id="schritt-text"><strong>Schritt 1 von 2:</strong> Wann und wo? Gilt für alle Teams dieses Trainings.</p>
+        <p id="schritt-text"><strong>Schritt 1 von 2:</strong> Wann, wo und was? Gilt für alle Teams dieses Trainings.</p>
       </div>
       <div class="entwurf" id="entwurf-hinweis" hidden>Angefangener Eintrag wiederhergestellt.
         <button type="button" class="link" id="entwurf-weg">Verwerfen</button></div>
@@ -456,11 +466,11 @@ async function seiteEintragen(vorTagId = null) {
       <section id="schritt1" class="karte">
         ${tage.length ? `<h2>${vorTagId ? 'Trainingstag' : 'Heutiger Trainingstag'}</h2>
           ${tage.map((t) => `<button class="wahl" data-tag="${t.id}">
-            <strong>${esc(t.ort)}</strong><span class="klein">${datumZeit(t.beginn)}${t.wetter.length ? ' · ' + esc(t.wetter.join(', ')) : ''}</span>
+            <strong>${esc(t.ort)}</strong><span class="klein">${datumZeit(t.beginn)}${t.art ? ' · ' + esc(t.art) : ''}${t.wetter.length ? ' · ' + esc(t.wetter.join(', ')) : ''}</span>
           </button>`).join('')}
           <details class="trenner"><summary>Anderen Trainingstag neu anlegen</summary>` : '<h2>Neuer Trainingstag</h2>'}
         <form id="f-tag">
-          ${letzter ? `<button type="button" class="vorlage" id="wie-zuletzt-tag">↺ Ort und Gelände wie zuletzt<span class="klein">${esc(letzter.tag.ort)}</span></button>` : ''}
+          ${letzter ? `<button type="button" class="vorlage" id="wie-zuletzt-tag">↺ Ort, Trainingsart und Gelände wie zuletzt<span class="klein">${esc([letzter.tag.ort, letzter.tag.art].filter(Boolean).join(" · "))}</span></button>` : ''}
           ${tagFelder()}
           <button class="haupt">Weiter</button>
         </form>
@@ -487,7 +497,7 @@ async function seiteEintragen(vorTagId = null) {
     document.getElementById('schritt2').hidden = false;
     document.getElementById('balken').style.width = '100%';
     document.getElementById('schritt-text').innerHTML = '<strong>Schritt 2 von 2:</strong> Dein Team: wie lief es?';
-    document.getElementById('tag-info').textContent = `${t.ort} · ${datumZeit(t.beginn)}`;
+    document.getElementById('tag-info').textContent = [t.ort, t.art, datumZeit(t.beginn)].filter(Boolean).join(' · ');
     window.scrollTo(0, 0);
   };
   app.querySelectorAll('[data-tag]').forEach((b) => b.addEventListener('click', () =>
@@ -511,11 +521,11 @@ async function seiteEintragen(vorTagId = null) {
   document.getElementById('entwurf-weg').addEventListener('click', () => { entwurfLoeschen(); seiteEintragen(); });
   // "Wie zuletzt": Felder aus dem letzten eigenen Eintrag übernehmen (danach frei änderbar)
   const uebernimm = (form, felder) => {
-    for (const [name, wert] of Object.entries(felder)) if (wert) { form[name].value = wert; form[name].closest('details.mehr')?.setAttribute('open', ''); }
+    for (const [name, wert] of Object.entries(felder)) if (wert) { form[name].value = wert; form[name].closest?.('details.mehr')?.setAttribute('open', ''); }
     form.dispatchEvent(new Event('input'));
   };
   document.getElementById('wie-zuletzt-tag')?.addEventListener('click', (ev) => {
-    uebernimm(fTag, { ort: letzter.tag.ort, gelaende: letzter.tag.gelaende }); ev.currentTarget.remove();
+    uebernimm(fTag, { ort: letzter.tag.ort, art: letzter.tag.art, gelaende: letzter.tag.gelaende }); ev.currentTarget.remove();
   });
   document.getElementById('wie-zuletzt-eintrag')?.addEventListener('click', (ev) => {
     if (versteckeVon(letzter).length) fE.querySelector('.versteck-liste').innerHTML = versteckeVon(letzter).map(versteckZeile).join('');
@@ -575,7 +585,8 @@ async function seiteTeam(mid, offenerEintrag = null) {
   zeige(`${kopf(m.id === ich.id ? 'Mein Profil' : m.name, '#/')}
     <main>
       <section class="karte">
-        <div class="zeile"><strong>${esc(m.funkrufname || 'ohne Funkrufname')}</strong>${etikettHtml(m)}</div>
+        <div class="zeile"><div><strong>${esc(m.id === ich.id ? m.name : m.funkrufname || 'ohne Funkrufname')}</strong>
+          ${m.id === ich.id ? `<div class="klein">${esc(m.funkrufname || 'ohne Funkrufname')}</div>` : ''}</div>${etikettHtml(m)}</div>
         ${darfAendern ? `<details><summary>Stammdaten ändern</summary>
           <form id="f-mitglied">
             <label>Funkrufname<input name="funkrufname" value="${esc(m.funkrufname)}" placeholder="Demo RHT …"></label>
@@ -622,14 +633,13 @@ async function seiteTeam(mid, offenerEintrag = null) {
         ${eintraege.length ? eintraege.map((e) => `<details class="karte eintrag" id="e-${e.id}" ${e.id === offenerEintrag ? 'open' : ''}>
           <summary><strong>${datum(e.tag.beginn)}</strong> · ${esc(e.tag.ort)}
             <span class="klein">${e.hund ? hundName(e.hund.name) + ' · ' : ''}Selbst: ${punkte(e.selbstbewertung)}${e.ziel_erreicht ? ' · Ziel: ' + e.ziel_erreicht : ''}</span></summary>
+          <p class="klein tag-zeile">${[e.tag.art, e.tag.wetter.join(', '), e.tag.schwerpunkt].filter(Boolean).map(esc).join(' · ')}
+            <a href="#/tag/${e.tag.id}">Trainingstag ›</a></p>
           <dl>
-            <p class="klein tag-zeile">${[e.tag.wetter.join(', '), e.tag.schwerpunkt].filter(Boolean).map(esc).join(' · ')}
-              <a href="#/tag/${e.tag.id}">Trainingstag ›</a></p>
             ${versteckeVon(e).length ? `<dt>${versteckeVon(e).length > 1 ? 'Versteckpersonen' : 'Versteckperson'}</dt><dd>${versteckeText(e)}</dd>` : ''}
             ${e.arbeit_hund ? `<dt>Arbeit des Hundes</dt><dd>${esc(e.arbeit_hund)}</dd>` : ''}
-            ${e.selbst_kommentar ? `<dt>Selbstbewertung</dt><dd>${punkte(e.selbstbewertung)} ${esc(e.selbst_kommentar)}</dd>` : ''}
             ${e.ziel ? `<dt>Ziel</dt><dd>${esc(e.ziel)}${e.ziel_erreicht ? ' (' + e.ziel_erreicht + ')' : ''}</dd>` : ''}
-            ${e.notiz ? `<dt>Notiz</dt><dd>${esc(e.notiz)}</dd>` : ''}
+            ${notizVon(e) ? `<dt>Notiz</dt><dd>${esc(notizVon(e))}</dd>` : ''}
           </dl>
           ${e.bewertung ? `<div class="bewertung"><h3>Trainerbewertung <span class="klein">(nur für dich und die Trainer)</span></h3>
             <dl>
@@ -679,11 +689,7 @@ async function seiteTeam(mid, offenerEintrag = null) {
     if (!confirm('Diesen Trainingseintrag wirklich löschen?')) return;
     try { await api.loescheEintrag(b.dataset.loeschen); await fertig('Eintrag gelöscht'); } catch (e) { fehler(e); }
   }));
-  verdrahteNotizen(async (text) => {
-    const y = scrollY;
-    if (text) sessionStorage.setItem('rhs-meldung', text);
-    await seiteTeam(mid); scrollTo(0, y);
-  });
+  verdrahteNotizen((text) => { if (text) sessionStorage.setItem('rhs-meldung', text); return ohneSprung(() => seiteTeam(mid)); });
   app.querySelectorAll('.f-notiz').forEach((f) => f.addEventListener('submit', (ev) => {
     ev.preventDefault();
     sperrend(f, async () => { await api.legeHundenotizAn(f.dataset.hund, formDaten(f).text); await fertig('Notiz gespeichert ✓'); });
@@ -741,11 +747,7 @@ async function seiteTrainer() {
     ev.preventDefault();
     sperrend(ev.target, async () => { await api.legeTrainernotizAn(formDaten(ev.target).text); await neuLaden('Notiz gespeichert ✓'); });
   });
-  verdrahteNotizen(async (text) => {
-    const y = scrollY;
-    if (text) sessionStorage.setItem('rhs-meldung', text);
-    await seiteTrainer(); scrollTo(0, y);
-  });
+  verdrahteNotizen((text) => { if (text) sessionStorage.setItem('rhs-meldung', text); return ohneSprung(seiteTrainer); });
   document.getElementById('f-mitglied-neu').addEventListener('submit', (ev) => {
     ev.preventDefault();
     const { hund, ...d } = leerZuNull(formDaten(ev.target));
@@ -766,6 +768,7 @@ async function seiteTrainings() {
       ${tage.map((t) => `<section class="karte training">
         <a class="training-kopf" href="#/tag/${t.id}">
           <div class="zeile"><strong>${esc(t.ort)}</strong><span class="klein">${datum(t.beginn)} ›</span></div>
+          ${t.art ? `<span class="art">${esc(t.art)}</span>` : ''}
           ${t.schwerpunkt ? `<div class="klein">Schwerpunkt: ${esc(t.schwerpunkt)}</div>` : ''}
           ${t.wetter.length ? `<div class="klein">${esc(t.wetter.join(', '))}</div>` : ''}
         </a>
@@ -786,11 +789,11 @@ async function seiteTag(tid) {
   zeige(`${kopf(t.ort, '#/trainings')}
     <main>
       <section class="karte">
-        <div class="zeile"><strong>${datumZeit(t.beginn)}</strong></div>
+        <div class="zeile"><strong>${datumZeit(t.beginn)}</strong>${t.art ? `<span class="art">${esc(t.art)}</span>` : ''}</div>
         <dl>
-          <dt>Wetter</dt><dd>${esc(t.wetter.join(', ') || '–')}${t.wetter_notiz ? ' – ' + esc(t.wetter_notiz) : ''}</dd>
-          <dt>Gelände</dt><dd>${esc(t.gelaende || '–')}</dd>
-          <dt>Schwerpunkt</dt><dd>${esc(t.schwerpunkt || '–')}</dd>
+          ${t.wetter.length || t.wetter_notiz ? `<dt>Wetter</dt><dd>${esc([t.wetter.join(', '), t.wetter_notiz].filter(Boolean).join(' – '))}</dd>` : ''}
+          ${t.gelaende ? `<dt>Gelände</dt><dd>${esc(t.gelaende)}</dd>` : ''}
+          ${t.schwerpunkt ? `<dt>Schwerpunkt</dt><dd>${esc(t.schwerpunkt)}</dd>` : ''}
         </dl>
         ${darfAendern ? `<details class="bewerten"><summary>Trainingstag ändern</summary>
           <form id="f-tag-aendern">${tagFelder(t)}<button class="haupt">Änderungen speichern</button></form>
@@ -869,6 +872,14 @@ function seiteOffline() {
     </div></main>`);
 }
 
+// Neu zeichnen, ohne nach oben zu springen (z. B. wenn jemand anderes etwas einträgt)
+async function ohneSprung(seite) {
+  const y = scrollY;
+  const fokus = document.activeElement?.id;
+  await seite(); scrollTo(0, y);
+  if (fokus) document.getElementById(fokus)?.focus();
+}
+
 // ---------- Router ----------
 async function route() {
   try {
@@ -890,12 +901,12 @@ async function route() {
     if (hash === '#/login' || hash === '#/') {
       if (hash === '#/login') { location.hash = '#/'; return; }
       await seiteUebersicht();
-      abmeldenVonBeobachtung = api.beobachte(() => { if (location.hash === '#/' || location.hash === '') seiteUebersicht(); });
+      abmeldenVonBeobachtung = api.beobachte(() => { if (location.hash === '#/' || location.hash === '') ohneSprung(seiteUebersicht); });
     } else if (hash.startsWith('#/eintragen')) {
       await seiteEintragen(hash.split('/')[2] || null);
     } else if (hash === '#/trainings') {
       await seiteTrainings();
-      abmeldenVonBeobachtung = api.beobachte(() => { if (location.hash === '#/trainings') seiteTrainings(); });
+      abmeldenVonBeobachtung = api.beobachte(() => { if (location.hash === '#/trainings') ohneSprung(seiteTrainings); });
     } else if (hash.startsWith('#/tag/')) {
       await seiteTag(hash.slice(6));
     } else if (hash === '#/profil') {

@@ -1,7 +1,7 @@
 // Service Worker: hält die App-Dateien vor, damit das Trainingsbuch auch ohne Netz startet.
 // Strategie "erst Netz, dann Speicher": online immer die neueste Version, offline die zuletzt geladene.
 // Daten (Supabase, andere Adresse) werden nicht zwischengespeichert.
-const CACHE = 'trainingsbuch-v2';
+const CACHE = 'trainingsbuch-v3';
 const GRUNDDATEIEN = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-512.png', './apple-touch-icon.png',
   './css/style.css', './js/main.js', './js/config.js', './js/daten/index.js', './js/daten/mock.js'];
 

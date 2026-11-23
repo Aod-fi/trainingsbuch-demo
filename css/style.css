@@ -309,3 +309,7 @@ details.mehr summary .klein { display: block; font-weight: 400; }
 .tag-zeile { margin: 8px 0 2px; }
 .tag-zeile a { white-space: nowrap; margin-left: 4px; }
 .haupt.zweitrangig { background: transparent; color: var(--akzent); border: 1.5px solid var(--akzent); box-shadow: none; }
+
+/* Trainingsart */
+.art-wahl span { text-align: center; padding: 6px 4px; line-height: 1.2; font-size: .9rem; }
+.art { display: inline-block; margin-top: 4px; padding: 2px 10px; border-radius: 99px; background: var(--akzent-hell); color: var(--akzent); font-size: .78rem; font-weight: 700; }

@@ -45,7 +45,7 @@ function startdaten() {
     h('h21', 'm21', 'Lucky', 'geprueft', '2025-02-16'),
   ];
   const tag = {
-    id: 't1', beginn: '2026-10-31T10:00:00.000Z', ort: 'Waldstück Testgelände',
+    id: 't1', beginn: '2026-10-31T10:00:00.000Z', ort: 'Waldstück Testgelände', art: 'Suche',
     wetter: ['wechselnder Wind', 'kalt', 'nass'], wetter_notiz: 'Morgens Nebel',
     gelaende: 'Mischwald, dichtes Unterholz', schwerpunkt: 'Verweisen aus der Distanz',
     erstellt_von: 'm2', erstellt_am: jetzt(),
@@ -54,11 +54,11 @@ function startdaten() {
     { id: 'e1', trainingstag_id: 't1', mitglied_id: 'm2', hund_id: 'h2', verstecke: [
         { person: 'Markus', besonderheiten: 'Liegend unter Plane' }, { person: 'Mia', besonderheiten: 'Erhöht im Hochsitz' }],
       arbeit_hund: 'Sehr motiviert, gute Querschläge',
-      selbstbewertung: 4, selbst_kommentar: 'Taktik am Hang verbessern', ziel: 'Ruhiger anzeigen',
-      ziel_erreicht: 'teilweise', notiz: '', erstellt_am: jetzt() },
+      selbstbewertung: 4, ziel: 'Ruhiger anzeigen',
+      ziel_erreicht: 'teilweise', notiz: 'Taktik am Hang verbessern', erstellt_am: jetzt() },
     { id: 'e2', trainingstag_id: 't1', mitglied_id: 'm4', hund_id: 'h4', verstecke: [{ person: 'Anna', besonderheiten: '' }],
       arbeit_hund: 'Anfangs unkonzentriert, dann gut',
-      selbstbewertung: 3, selbst_kommentar: '', ziel: 'Freiverweis üben',
+      selbstbewertung: 3, ziel: 'Freiverweis üben',
       ziel_erreicht: 'ja', notiz: '', erstellt_am: jetzt() },
   ];
   const trainerbewertungen = [
